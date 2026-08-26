@@ -1,0 +1,50 @@
+# Uruchomienie serwera klucza u operatora.
+#
+# Cala robota operatora to: ustawic BEAT_KEY_OP, wystawic port pod HTTPS i
+# uruchomic. Klucz wytworzy sie sam przy pierwszym starcie i zostanie w
+# nazwanym woluminie. Nikt go stamtad nie wyjmuje — takze autor tego pliku.
+#
+# Pelny kontrakt: PROTOCOL.md
+
+services:
+  beat-key:
+    # Pobieraj PO DIGESCIE, nie po tagu (SEAL.md 13, R7). Tag mozna przestawic
+    # na inny obraz; digestu nie — to jedyna forma, w ktorej "ten obraz"
+    # znaczy naprawde ten obraz.
+    #
+    #   image: ghcr.io/deiflagellum/beat-key@sha256:<digest z wydania>
+    #
+    # Digest jest w podsumowaniu przebiegu beat-key-release na GitHubie.
+    # Ponizszy tag sluzy wylacznie do pierwszego uruchomienia na probe.
+    image: ghcr.io/deiflagellum/beat-key:latest
+    container_name: beat-key
+    restart: unless-stopped
+
+    environment:
+      # Stabilny identyfikator PODMIOTU: [a-z0-9-], do 32 znakow, nadawany raz
+      # i nigdy nie zmieniany. Bez nazw srodowisk (-prod, -vps2) — zmiana
+      # hostingu nie zmienia operatora.
+      BEAT_KEY_OP: "zmien-mnie"
+
+    volumes:
+      # JEDYNE miejsce, w ktorym istnieje klucz prywatny. Kopia zapasowa tego
+      # woluminu to kopia klucza — traktowac jak sejf, nie jak backup aplikacji.
+      - beat-key-data:/data
+
+    ports:
+      - "8080:8080"
+
+    # Serwer nic nie zapisuje poza /data, wiec reszta systemu plikow moze byc
+    # tylko do odczytu.
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  beat-key-data:

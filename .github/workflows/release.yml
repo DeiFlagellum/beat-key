@@ -1,0 +1,166 @@
+# Publikacja obrazu serwera klucza: tag `vX.Y.Z`
+#   -> ghcr.io/deiflagellum/beat-key
+#   -> docker.io/<DOCKERHUB_USERNAME>/beat-key  (jesli zmienna ustawiona)
+#
+# Jeden build, ten sam digest w obu rejestrach. Obraz dostaje SBOM + provenance
+# (atestacje BuildKit) i podpis cosign keyless (OIDC GitHub Actions).
+#
+# To repo jest PUBLICZNE celowo. Operator ma moc odbudowac obraz ze zrodel i
+# porownac go z tym, ktory pobral — bez tego jego udzial nie bylby niezalezny
+# od BeatTime, bo obraz przygotowalby ktos, kogo nie da sie sprawdzic
+# (SEAL.md 13, R7).
+#
+# Tagi i aktualizacje:
+#   v1.2.3     -> 1.2.3, 1.2, 1, latest — operator przypiety do "1" lub "1.2"
+#                 dostaje poprawke po `docker compose pull`, bez edycji compose
+#   v1.2.4-rc1 -> tylko 1.2.4-rc1; prerelease nie rusza latest/1.2/1, wiec
+#                 da sie go bezpiecznie przetestowac u partnera
+#
+# Konfiguracja repo (Settings -> Secrets and variables -> Actions), WYLACZNIE
+# jesli chcemy takze Docker Huba — GHCR dziala bez zadnej konfiguracji:
+#   variable DOCKERHUB_USERNAME
+#   secret   DOCKERHUB_TOKEN
+#
+# PO PIERWSZYM WYDANIU sprawdzic widocznosc pakietu:
+#   GitHub -> Packages -> beat-key -> Package settings -> Change visibility.
+# Pakiet musi byc PUBLICZNY, inaczej operator go nie pobierze.
+#
+# Weryfikacja przez operatora:
+#   cosign verify ghcr.io/deiflagellum/beat-key:X.Y.Z \
+#     --certificate-identity-regexp 'github.com/DeiFlagellum/beat-key' \
+#     --certificate-oidc-issuer https://token.actions.githubusercontent.com
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write   # cosign keyless
+
+jobs:
+  # Bramka przed publikacja: podpis cosign poswiadcza pochodzenie artefaktu,
+  # wiec artefakt musi najpierw przejsc testy.
+  test:
+    uses: ./.github/workflows/ci.yml
+
+  build-push-sign:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Nazwy repozytoriow obrazu musza byc malymi literami (spec OCI), dlatego
+      # nie uzywamy ${{ github.repository }} (DeiFlagellum/...).
+      #
+      # Docker Hub dokladany warunkowo: bez tego pierwsze wydanie padaloby na
+      # logowaniu, gdyby sekrety nie byly jeszcze ustawione. GHCR wystarcza.
+      - id: images
+        run: |
+          {
+            echo 'list<<IMAGES'
+            echo 'ghcr.io/deiflagellum/beat-key'
+            if [ -n '${{ vars.DOCKERHUB_USERNAME }}' ]; then
+              echo 'docker.io/${{ vars.DOCKERHUB_USERNAME }}/beat-key'
+            fi
+            echo 'IMAGES'
+          } >> "$GITHUB_OUTPUT"
+
+      # Rozbior taga: v1.2.3 -> 1.2.3 + 1.2 + 1 + latest.
+      # Prerelease (-rc1) dostaje wylacznie swoj pelny tag.
+      - id: ver
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          if [[ "$v" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "full=true" >> "$GITHUB_OUTPUT"
+            echo "major=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+            echo "minor=${BASH_REMATCH[1]}.${BASH_REMATCH[2]}" >> "$GITHUB_OUTPUT"
+          else
+            echo "full=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/login-action@v3
+        if: vars.DOCKERHUB_USERNAME != ''
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.images.outputs.list }}
+          flavor: latest=false
+          tags: |
+            type=raw,value=${{ steps.ver.outputs.version }}
+            type=raw,value=${{ steps.ver.outputs.minor }},enable=${{ steps.ver.outputs.full == 'true' }}
+            type=raw,value=${{ steps.ver.outputs.major }},enable=${{ steps.ver.outputs.full == 'true' }}
+            type=raw,value=latest,enable=${{ steps.ver.outputs.full == 'true' }}
+          labels: |
+            org.opencontainers.image.title=beat-key
+            org.opencontainers.image.description=Serwer klucza dla kopert beattime-seal-v1
+
+      - id: push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: mode=max
+          sbom: true
+          cache-from: type=gha
+          # arm64 dolozone swiadomie: partner moze miec Hetzner CAX albo
+          # Raspberry Pi — serwer klucza zuzywa 20 MB RAM, wiec to realny
+          # scenariusz, a nie egzotyka.
+          platforms: linux/amd64,linux/arm64
+
+      - uses: sigstore/cosign-installer@v3
+
+      - name: Podpisz obraz (cosign keyless, kazdy rejestr)
+        env:
+          DIGEST: ${{ steps.push.outputs.digest }}
+          IMAGES: ${{ steps.images.outputs.list }}
+        run: |
+          while read -r image; do
+            [ -n "$image" ] || continue
+            cosign sign --yes "${image}@${DIGEST}"
+          done <<< "$IMAGES"
+
+      # Digest jest tym, co operator faktycznie wpisuje do compose.yml — ma byc
+      # do skopiowania jednym ruchem, a nie do wygrzebania z logu builda.
+      - name: Wypisz digest do skopiowania
+        env:
+          DIGEST: ${{ steps.push.outputs.digest }}
+          IMAGES: ${{ steps.images.outputs.list }}
+        run: |
+          {
+            echo "## beat-key ${{ steps.ver.outputs.version }}"
+            echo
+            echo "Do przekazania operatorowi — pobieranie PO DIGESCIE (R7):"
+            echo
+            echo '```yaml'
+            while read -r image; do
+              [ -n "$image" ] || continue
+              echo "image: ${image}@${DIGEST}"
+            done <<< "$IMAGES"
+            echo '```'
+            echo
+            echo "Weryfikacja podpisu:"
+            echo
+            echo '```bash'
+            echo "cosign verify ghcr.io/deiflagellum/beat-key@${DIGEST} \\"
+            echo "  --certificate-identity-regexp 'github.com/DeiFlagellum/beat-key' \\"
+            echo "  --certificate-oidc-issuer https://token.actions.githubusercontent.com"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,96 @@
+# Bramka jakosci. Wolana na dwa sposoby:
+#   - bezposrednio przy push/PR (ciagla kontrola),
+#   - przez release.yml (workflow_call) jako warunek publikacji obrazu.
+#
+# Testy NIE leca wewnatrz obrazu — obraz jest distroless, nie ma w nim ani
+# powloki, ani binarki testowej, i to jest cecha, nie przeoczenie (SEAL.md 13,
+# R2: nie ma sie do czego zalogowac). Parzystosc srodowiska zapewniamy inaczej:
+# `go-version-file` bierze wersje Go z tego samego go.mod, ktorego uzywa
+# Dockerfile.
+name: ci
+
+on:
+  push:
+    branches: ['main']
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Testy
+        run: go test ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      # README obiecuje operatorom, ze moga odtworzyc obraz ze zrodel i
+      # porownac, zamiast wierzyc nam na slowo. To jest test, ktory pilnuje,
+      # zeby ta obietnica byla prawdziwa: dwie budowy z tego samego commitu
+      # musza dac bajt w bajt te sama binarke.
+      - name: Budowa jest powtarzalna
+        env:
+          CGO_ENABLED: '0'
+        run: |
+          go build -trimpath -ldflags="-s -w -buildid=" -o /tmp/beat-key-1 .
+          go clean -cache
+          go build -trimpath -ldflags="-s -w -buildid=" -o /tmp/beat-key-2 .
+          a=$(sha256sum /tmp/beat-key-1 | cut -d' ' -f1)
+          b=$(sha256sum /tmp/beat-key-2 | cut -d' ' -f1)
+          echo "budowa 1: $a"
+          echo "budowa 2: $b"
+          if [ "$a" != "$b" ]; then
+            echo "::error::budowa NIE jest powtarzalna — R7 przestaje obowiazywac"
+            exit 1
+          fi
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Zbuduj obraz
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: beat-key:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Test dymny na gotowym obrazie: pusty wolumen musi dac nowy klucz, a
+      # przyszly beat musi dac 404. To sa dwie wlasnosci, na ktorych stoi caly
+      # format — jesli obraz ich nie ma, nie wolno go opublikowac.
+      - name: Test dymny obrazu
+        run: |
+          docker run -d --name bk -e BEAT_KEY_OP=ci-operator -p 18080:8080 beat-key:ci
+          for _ in $(seq 1 30); do
+            curl -sf http://127.0.0.1:18080/healthz >/dev/null && break
+            sleep 0.5
+          done
+          docker logs bk | grep -q "wygenerowano NOWY klucz" \
+            || { echo "::error::pusty wolumen nie wytworzyl klucza (R1)"; exit 1; }
+
+          now=$(curl -s http://127.0.0.1:18080/info | python3 -c 'import sys,json;print(json.load(sys.stdin)["beat_index"])')
+          code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:18080/share/$((now+1))")
+          [ "$code" = "404" ] \
+            || { echo "::error::przyszly beat dal $code zamiast 404 (R4)"; exit 1; }
+          code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:18080/share/$now")
+          [ "$code" = "200" ] \
+            || { echo "::error::biezacy beat dal $code zamiast 200"; exit 1; }
+
+          # Podpis musi weryfikowac sie NIEZALEZNIE od serwera, ktory go wydal.
+          pub=$(curl -s http://127.0.0.1:18080/info | python3 -c 'import sys,json;print(json.load(sys.stdin)["public_key"])')
+          sig=$(curl -s "http://127.0.0.1:18080/share/$((now-1))" | python3 -c 'import sys,json;print(json.load(sys.stdin)["signature"])')
+          go run ./cmd/verify-share -pub "$pub" -beat "$((now-1))" -sig "$sig" \
+            || { echo "::error::udzial nie weryfikuje sie wobec opublikowanego klucza"; exit 1; }
+
+          docker rm -f bk >/dev/null
