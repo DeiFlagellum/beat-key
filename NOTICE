@@ -1,0 +1,33 @@
+beat-key
+Copyright 2026 DeiFlagellum
+
+This product includes software developed as part of the BeatTime project
+(https://beattime.live).
+
+Licensed under the Apache License, Version 2.0. See LICENSE.
+
+--------------------------------------------------------------------------
+Third-party dependencies
+--------------------------------------------------------------------------
+
+This software links the following components. They are used unmodified and
+remain under their own licenses.
+
+  github.com/drand/kyber              MPL-2.0
+      (c) DEDIS/EPFL 2017. Weak, file-level copyleft: the MPL-covered files
+      stay under MPL-2.0 even though this larger work is Apache-2.0, which
+      MPL-2.0 section 3.3 permits. Source for those files is published at
+      https://github.com/drand/kyber — no modified copies are distributed
+      here.
+
+  github.com/drand/kyber-bls12381     MIT
+  github.com/kilic/bls12-381          Apache-2.0
+  golang.org/x/crypto                 BSD-3-Clause  (c) The Go Authors
+  golang.org/x/sys                    BSD-3-Clause  (c) The Go Authors
+
+The published container image is built from this source and contains the
+statically linked binary plus the distroless base image. A full SBOM is
+attached to every published image as a BuildKit attestation:
+
+  docker buildx imagetools inspect ghcr.io/deiflagellum/beat-key:<tag> \
+    --format '{{ json .SBOM }}'

@@ -212,3 +212,18 @@ go test ./...        # unit tests, incl. frozen beat vectors
 go build .           # server binary
 docker build -t beat-key:test .
 ```
+
+---
+
+## License
+
+Apache License 2.0 — see [LICENSE](LICENSE) and [NOTICE](NOTICE).
+
+The permissive license is part of the point. An operator is asked to rebuild
+this image from source and compare it against the published one; a licence that
+did not clearly allow that would make the verification legally murky and the
+independence claim hollow. Apache-2.0 also carries an express patent grant,
+which matters for cryptographic code.
+
+Dependencies keep their own licences (MPL-2.0, MIT, Apache-2.0, BSD-3-Clause)
+and are used unmodified — details in [NOTICE](NOTICE).
