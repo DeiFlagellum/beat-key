@@ -126,6 +126,13 @@ the guarantee the envelope format is sold on.
 A corrupt key file must **stop the server**, not trigger regeneration. A fresh
 key would silently invalidate every envelope sealed against the old one.
 
+The same reasoning extends to a *missing* key. R1 says an empty data directory
+means "generate", which is right on first start and catastrophic on an
+accidental one — a mis-mounted volume looks exactly like a first start. An
+implementation should therefore offer a way to assert the expected public key
+(here: `BEAT_KEY_EXPECT_PUB`) and refuse to start, creating nothing, when it
+does not match.
+
 ---
 
 ## 7. What this does not do

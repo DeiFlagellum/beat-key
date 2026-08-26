@@ -107,3 +107,28 @@ func TestSeparateVolumesGetSeparateKeys(t *testing.T) {
 		t.Fatal("dwa osobne wolumeny dostaly ten sam klucz")
 	}
 }
+
+// Exists nie moze niczego tworzyc — na tym stoi bezpiecznik
+// BEAT_KEY_EXPECT_PUB, ktory ma odmowic startu ZANIM powstanie jakikolwiek
+// plik w zle podpietym woluminie.
+func TestExistsDoesNotCreateAnything(t *testing.T) {
+	dir := t.TempDir()
+	if Exists(dir) {
+		t.Fatal("Exists zglosil klucz w pustym katalogu")
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("ReadDir: %v", err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("Exists zostawil po sobie %d plikow", len(entries))
+	}
+
+	suite, scheme := newScheme()
+	if _, err := Open(dir, suite, scheme); err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	if !Exists(dir) {
+		t.Fatal("Exists nie widzi wytworzonego klucza")
+	}
+}

@@ -36,6 +36,16 @@ type Store struct {
 	Created bool
 }
 
+// Exists mowi, czy w katalogu lezy juz klucz — NIE tworzac niczego.
+//
+// Potrzebne, zeby bezpiecznik BEAT_KEY_EXPECT_PUB mogl odmowic startu, zanim
+// powstanie jakikolwiek plik. Inaczej przy zle podpietym woluminie zostawalby
+// tam osierocony klucz, ktory ktos moglby pozniej wziac za wlasciwy.
+func Exists(dir string) bool {
+	_, err := os.Stat(filepath.Join(dir, KeyFile))
+	return err == nil
+}
+
 // Open wczytuje klucz z dir albo generuje nowy, gdy zadnego tam nie ma.
 func Open(dir string, suite pairing.Suite, scheme sign.AggregatableScheme) (*Store, error) {
 	if err := os.MkdirAll(dir, 0o700); err != nil {

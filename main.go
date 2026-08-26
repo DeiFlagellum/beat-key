@@ -41,11 +41,34 @@ func main() {
 	}
 	dir := envOr("BEAT_KEY_DIR", "/data")
 	addr := envOr("BEAT_KEY_ADDR", ":8080")
+	// Bezpiecznik przed CICHA PODMIANA KLUCZA. Klucz przezywa restarty i
+	// podmiany obrazu, bo lezy w woluminie — ale tylko dopoki wolumen jest
+	// podpiety. Literowka w sciezce montowania, odtworzenie serwera bez tego
+	// katalogu albo pomylony plik compose daja pusty katalog, a wtedy R1
+	// zadziala zgodnie z projektem i wygeneruje NOWY klucz. Serwer wstanie,
+	// bedzie odpowiadal, i dopiero po latach ktos odkryje, ze udzialy nie
+	// pasuja do kopert.
+	//
+	// Ustaw BEAT_KEY_EXPECT_PUB na swoj klucz publiczny (z /info), a kontener
+	// odmowi startu, zamiast po cichu zaczac zycie od nowa. To NIE jest
+	// import klucza — klucza prywatnego nadal nie da sie wstrzyknac.
+	expectPub := os.Getenv("BEAT_KEY_EXPECT_PUB")
 
 	suite := bls12381.NewBLS12381Suite()
 	// Podpisy na G1, klucze na G2 — parzystosc ze schematem drand
 	// bls-unchained-g1-rfc9380 (SEAL.md 6.2).
 	scheme := bls.NewSchemeOnG1(suite)
+
+	// Sprawdzenie PRZED Open: przy zle podpietym woluminie odmawiamy startu,
+	// nie zostawiajac po sobie osieroconego pliku klucza.
+	if expectPub != "" && !keystore.Exists(dir) {
+		log.Error("BEAT_KEY_EXPECT_PUB jest ustawiony, ale w katalogu danych "+
+			"NIE MA klucza — to niemal na pewno niepodpiety albo zly wolumen. "+
+			"Nie startuje i nie generuje nowego, zeby nie zastapic klucza, "+
+			"wobec ktorego zapieczetowano juz koperty.",
+			"katalog", dir, "oczekiwany", expectPub)
+		os.Exit(3)
+	}
 
 	store, err := keystore.Open(dir, suite, scheme)
 	if err != nil {
@@ -58,6 +81,16 @@ func main() {
 	if err != nil {
 		log.Error("klucz publiczny", "err", err)
 		os.Exit(1)
+	}
+
+	if expectPub != "" {
+		if pub != expectPub {
+			log.Error("klucz w katalogu danych NIE jest tym, ktorego "+
+				"oczekiwano — sprawdz, czy podpiety jest wlasciwy wolumen",
+				"katalog", dir, "oczekiwany", expectPub, "znaleziony", pub)
+			os.Exit(3)
+		}
+		log.Info("klucz zgodny z BEAT_KEY_EXPECT_PUB")
 	}
 
 	if store.Created {

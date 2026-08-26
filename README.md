@@ -113,6 +113,28 @@ It lives at `/data/key.bin` inside the container, on a named Docker volume.
   regenerate — a fresh key would silently invalidate every existing envelope.
   Restore from your copy instead.
 
+### Guard against a silently replaced key
+
+The key survives restarts and image upgrades because it lives on the volume,
+not in the image. But that protection is only as good as the mount: a typo in
+the path, a server rebuilt without that directory, or the wrong compose file
+gives an *empty* directory — and the server will then do exactly what it is
+designed to do on first start and generate a **new** key. It comes up, answers
+requests, and nobody finds out until an envelope fails to open years later.
+
+Set `BEAT_KEY_EXPECT_PUB` to your public key and that becomes a loud refusal
+instead:
+
+```yaml
+environment:
+  BEAT_KEY_OP: your-org
+  BEAT_KEY_EXPECT_PUB: "<public_key from /info>"
+```
+
+The server then exits with code 3 — **without creating anything** — if the key
+is missing or is not the one expected. This is not a key import: the private
+key still cannot be injected from outside.
+
 The private key never appears in logs, in any endpoint, or in any output. The
 image contains no shell and no package manager, so there is nothing inside the
 container to log into.
