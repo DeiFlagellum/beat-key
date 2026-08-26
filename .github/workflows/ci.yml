@@ -76,11 +76,18 @@ jobs:
             curl -sf http://127.0.0.1:18080/healthz >/dev/null && break
             sleep 0.5
           done
-          docker logs bk | grep -q "wygenerowano NOWY klucz" \
+          # 2>&1 jest KONIECZNE: slog pisze na stderr, wiec bez zlania
+          # strumieni grep nie widzi niczego i krok pada z bledu narzedzia,
+          # a nie z zachowania obrazu.
+          docker logs bk 2>&1 | grep -q "wygenerowano NOWY klucz" \
             || { echo "::error::pusty wolumen nie wytworzyl klucza (R1)"; exit 1; }
 
           now=$(curl -s http://127.0.0.1:18080/info | python3 -c 'import sys,json;print(json.load(sys.stdin)["beat_index"])')
-          code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:18080/share/$((now+1))")
+          # Doba do przodu, nie jeden beat: przy now+1 wystarczy, ze granica
+          # beatu wypadnie miedzy pobraniem indeksu a zadaniem, i krok flakuje.
+          # Sama granica jest pokryta deterministycznie w tescie jednostkowym
+          # (TestFutureBeatIs404, zegar wstrzykniety).
+          code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:18080/share/$((now+1000))")
           [ "$code" = "404" ] \
             || { echo "::error::przyszly beat dal $code zamiast 404 (R4)"; exit 1; }
           code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:18080/share/$now")
