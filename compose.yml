@@ -8,15 +8,17 @@
 
 services:
   beat-key:
-    # Pobieraj PO DIGESCIE, nie po tagu (SEAL.md 13, R7). Tag mozna przestawic
-    # na inny obraz; digestu nie — to jedyna forma, w ktorej "ten obraz"
-    # znaczy naprawde ten obraz.
+    # PO DIGESCIE, nie po tagu (R7). Tag mozna przestawic na inny obraz;
+    # digestu nie — to jedyna forma, w ktorej "ten obraz" znaczy naprawde ten
+    # obraz. Digest kazdego wydania jest w podsumowaniu przebiegu `release`.
     #
-    #   image: ghcr.io/deiflagellum/beat-key@sha256:<digest z wydania>
+    # beat-key 1.0.0:
+    image: ghcr.io/deiflagellum/beat-key@sha256:512b3542aaa3d43f52d0f364d83d681c2b9b2c07d357cd3e55f954f397a30a98
     #
-    # Digest jest w podsumowaniu przebiegu beat-key-release na GitHubie.
-    # Ponizszy tag sluzy wylacznie do pierwszego uruchomienia na probe.
-    image: ghcr.io/deiflagellum/beat-key:latest
+    # Alternatywa dla operatora, ktory woli automatyczne poprawki zamiast
+    # przypiecia: `ghcr.io/deiflagellum/beat-key:1` da nowsze wydania 1.x po
+    # `docker compose pull`. Wygoda kosztem tego, ze nie wiesz z gory, co
+    # uruchamiasz — swiadomy wybor, nie domyslny.
     container_name: beat-key
     restart: unless-stopped
 

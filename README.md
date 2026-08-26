@@ -73,12 +73,14 @@ were something only you received, whoever built it could have put anything in
 it — and would then effectively control your key.
 
 ```bash
-docker pull ghcr.io/deiflagellum/beat-key@sha256:<digest-from-the-release>
+# beat-key 1.0.0
+docker pull ghcr.io/deiflagellum/beat-key@sha256:512b3542aaa3d43f52d0f364d83d681c2b9b2c07d357cd3e55f954f397a30a98
 
-cosign verify ghcr.io/deiflagellum/beat-key@sha256:<digest>   --certificate-identity-regexp 'github.com/DeiFlagellum/beat-key'   --certificate-oidc-issuer https://token.actions.githubusercontent.com
+cosign verify ghcr.io/deiflagellum/beat-key@sha256:512b3542aaa3d43f52d0f364d83d681c2b9b2c07d357cd3e55f954f397a30a98   --certificate-identity-regexp 'github.com/DeiFlagellum/beat-key'   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
 
 The digest for each release is printed in that release's workflow summary.
+Images are published for `linux/amd64` and `linux/arm64`.
 
 Builds are reproducible (`CGO_ENABLED=0`, `-trimpath`, `-buildid=`), so you can
 rebuild from source and compare rather than take anyone's word. CI enforces
