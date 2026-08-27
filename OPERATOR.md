@@ -41,17 +41,42 @@ on one whose root password is still sitting in a support ticket.
 
 On a freshly provisioned VPS:
 
+**On the server:**
+
 ```bash
-# 1. Change the root password, especially if it was ever sent to anyone
+# Change the root password, especially if it was ever sent to anyone
 passwd
 
-# 2. Put your SSH key on the box, then turn off password login
-ssh-copy-id root@<ip>          # from your own machine
-sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
-systemctl restart sshd         # keep your current session open until you have tested a new one
-
-# 3. Confirm the clock is right — a wrong clock releases shares at the wrong time
+# Confirm the clock is right — a wrong clock releases shares at the wrong time
 timedatectl
+
+# Find out what you are dealing with (see the note below)
+getenforce
+systemctl is-active firewalld
+```
+
+**On your own computer — not on the server:**
+
+```bash
+ssh-keygen -t ed25519          # skip if you already have a key
+ssh-copy-id root@<ip>
+```
+
+On Windows there is no `ssh-copy-id`; use PowerShell instead:
+
+```powershell
+type $env:USERPROFILE\.ssh\id_ed25519.pub | ssh root@<ip> `
+  "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
+```
+
+**Only after key login works**, disable password authentication. Open a
+*second* terminal, confirm `ssh root@<ip>` lets you in without asking for a
+password, and keep your first session open the whole time — that session is
+your way back if anything goes wrong:
+
+```bash
+sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
+systemctl restart sshd
 ```
 
 Your hosting provider always has hypervisor-level access to the disk; that is
@@ -70,12 +95,11 @@ against the other operators.
 These ship with SELinux enforcing and firewalld enabled, which Debian and
 Ubuntu do not. Both are good defaults — they just need one command each.
 
-```bash
-# Check what you are dealing with
-getenforce                     # Enforcing / Permissive / Disabled
-systemctl is-active firewalld
+If `systemctl is-active firewalld` said **`inactive`**, there is no host
+firewall and you can skip the two commands below entirely. If it said
+`active`, the reverse proxy in step 7 needs the ports opened:
 
-# Let the reverse proxy answer on 80 and 443 (step 7)
+```bash
 firewall-cmd --permanent --add-service=http --add-service=https
 firewall-cmd --reload
 ```
