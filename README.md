@@ -7,7 +7,8 @@ that beat has arrived. Combined with an independent beacon (drand), it makes an
 envelope that **no single party can open early**, including the person who
 built it.
 
-Full protocol: [`PROTOCOL.md`](PROTOCOL.md).
+Setting one up? [`OPERATOR.md`](OPERATOR.md) is the ten-minute, step-by-step
+version. Full protocol: [`PROTOCOL.md`](PROTOCOL.md).
 
 ---
 
@@ -38,7 +39,7 @@ means envelopes open later, never that data is lost. The real request is
 several; on its own it reveals nothing. Nor can the BeatTime operator open one
 without you.
 
-**Resource cost.** ~16 MB image, ~20 MB RAM, a few kilobytes of traffic a day.
+**Resource cost.** Measured, not estimated: 3.4 MB to download, 16 MB on disk, and **2-3 MB of RAM** — idle and under load alike. A few kilobytes of traffic a day. The container is not the constraint; being able to run Docker at all is.
 
 ---
 
