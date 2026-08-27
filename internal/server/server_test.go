@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/base64"
+	"html"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -179,4 +180,56 @@ func containsAny(s string, subs ...string) bool {
 		}
 	}
 	return false
+}
+
+// Adres serwera trafia do kopert jako podpowiedz i zostaje tam na lata. Ktos,
+// kto wklei go w przegladarke, ma zobaczyc, czym ten serwer jest — a nie golе
+// "404 page not found".
+func TestRootPageExplainsWhatThisIs(t *testing.T) {
+	srv, _, _ := newTestServer(t)
+	rec := get(t, srv, "/")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("/ dalo %d, oczekiwano 200", rec.Code)
+	}
+	if ct := rec.Header().Get("Content-Type"); !containsAny(ct, "text/html") {
+		t.Errorf("Content-Type = %q", ct)
+	}
+	body := rec.Body.String()
+	for _, needle := range []string{"test-operator", SchemeID, "/share/", "PROTOCOL.md"} {
+		if !containsAny(body, needle) {
+			t.Errorf("brak %q na stronie glownej", needle)
+		}
+	}
+}
+
+// Kazda nieznana sciezka trafia do tego samego handlera. Literowka w adresie
+// udzialu MUSI dac 404, a nie strone powitalna — inaczej wyglada na sukces.
+func TestUnknownPathIsStill404(t *testing.T) {
+	srv, _, _ := newTestServer(t)
+	for _, path := range []string{"/shares/123", "/info2", "/admin", "/.env"} {
+		if rec := get(t, srv, path); rec.Code != http.StatusNotFound {
+			t.Errorf("%s dalo %d, oczekiwano 404", path, rec.Code)
+		}
+	}
+}
+
+// Klucz PRYWATNY nie moze wyciec zadnym kanalem, takze przez strone.
+func TestRootPageLeaksNoPrivateKey(t *testing.T) {
+	srv, scheme, store := newTestServer(t)
+	body := get(t, srv, "/").Body.String()
+	sig, err := store.Sign(scheme, []byte("proba"))
+	if err != nil {
+		t.Fatalf("Sign: %v", err)
+	}
+	if containsAny(body, string(sig)) {
+		t.Fatal("strona zawiera material zwiazany z kluczem prywatnym")
+	}
+	// html/template koduje `+` jako `&#43;`, a base64 plusy zawiera — w
+	// przegladarce wyswietla sie to poprawnie, wiec sprawdzamy tresc PO
+	// odkodowaniu, a nie zrodlo doslownie. Postac maszynowa klucza i tak
+	// wydaje /info, nie ta strona.
+	pub, _ := srv.PublicKeyB64()
+	if !containsAny(html.UnescapeString(body), pub) {
+		t.Error("strona nie pokazuje klucza PUBLICZNEGO, a powinna")
+	}
 }
