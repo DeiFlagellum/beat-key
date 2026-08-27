@@ -30,11 +30,25 @@ services:
 
     volumes:
       # JEDYNE miejsce, w ktorym istnieje klucz prywatny. Kopia zapasowa tego
-      # woluminu to kopia klucza — traktowac jak sejf, nie jak backup aplikacji.
-      - beat-key-data:/data
+      # katalogu to kopia klucza — traktowac jak sejf, nie jak backup aplikacji.
+      #
+      # Katalog na hoscie, a NIE nazwany wolumen Dockera: nazwany wolumen zyje
+      # w /var/lib/docker/volumes, czyli tam, gdzie nikt go nie szuka przy
+      # robieniu kopii. Klucz ma lezec pod sciezka, ktora operator zna.
+      #
+      # `:Z` nadaje katalogowi etykiete SELinuxa (AlmaLinux, Rocky, Fedora).
+      # Nazwane wolumeny Docker etykietuje sam, katalogi hosta juz nie — stad
+      # ta opcja. Na systemach bez SELinuxa jest ignorowana.
+      #
+      # Katalog trzeba zalozyc PRZED pierwszym startem, kontener chodzi jako
+      # nonroot (uid 65532):
+      #     mkdir -p /srv/beat-key && chown 65532:65532 /srv/beat-key
+      - /srv/beat-key:/data:Z
 
     ports:
-      - "8080:8080"
+      # Tylko lokalnie. Na swiat wystawia reverse proxy pod HTTPS — port 8080
+      # nie ma po co byc osiagalny z zewnatrz.
+      - "127.0.0.1:8080:8080"
 
     # Serwer nic nie zapisuje poza /data, wiec reszta systemu plikow moze byc
     # tylko do odczytu.
@@ -48,5 +62,3 @@ services:
         max-size: "10m"
         max-file: "3"
 
-volumes:
-  beat-key-data:
