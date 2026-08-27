@@ -117,14 +117,41 @@ against the other operators.
 These ship with SELinux enforcing and firewalld enabled, which Debian and
 Ubuntu do not. Both are good defaults — they just need one command each.
 
-If `systemctl is-active firewalld` said **`inactive`**, there is no host
-firewall and you can skip the two commands below entirely. If it said
-`active`, the reverse proxy in step 7 needs the ports opened:
+A **minimal** AlmaLinux/Rocky install may have no firewall at all — not even
+`firewall-cmd`. On a machine meant to run unattended for years, three things are
+worth the five minutes, roughly in this order of value:
 
 ```bash
+# 1. Security updates that apply themselves. Highest value of the three:
+#    nobody will be watching this box in two years.
+dnf install -y dnf-automatic
+sed -i 's/^upgrade_type =.*/upgrade_type = security/;s/^apply_updates =.*/apply_updates = yes/'     /etc/dnf/automatic.conf
+systemctl enable --now dnf-automatic.timer
+
+# 2. Rate-limit SSH guessing (essential if you kept password login)
+dnf install -y epel-release && dnf install -y fail2ban fail2ban-firewalld
+printf '[sshd]
+enabled = true
+maxretry = 5
+bantime = 1h
+' > /etc/fail2ban/jail.local
+systemctl enable --now fail2ban
+
+# 3. Let in only what is needed. Add ssh BEFORE reloading, or you lock
+#    yourself out of your own session.
+dnf install -y firewalld && systemctl enable --now firewalld
+firewall-cmd --permanent --add-service=ssh
 firewall-cmd --permanent --add-service=http --add-service=https
 firewall-cmd --reload
 ```
+
+If firewalld was already `active`, only the `firewall-cmd` lines apply.
+
+> **Docker writes its own nftables rules, and published ports bypass the
+> firewall.** If the ports line in step 4 were ever "simplified" to
+> `"8080:8080"`, port 8080 would be reachable from the internet despite
+> firewalld — and `firewall-cmd --list-all` would not show it. What actually
+> keeps it private is the `127.0.0.1:` prefix. Leave it there.
 
 For SELinux you do not need to disable anything: the `:Z` on the volume in
 step 4 tells Docker to label the directory correctly. If you ever see
