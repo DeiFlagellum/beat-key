@@ -55,6 +55,9 @@ getenforce
 systemctl is-active firewalld
 ```
 
+**SSH keys are recommended, not required.** If you would rather keep password
+login, skip to *Staying with a password* below.
+
 **On your own computer — not on the server:**
 
 ```bash
@@ -78,6 +81,25 @@ your way back if anything goes wrong:
 sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
 systemctl restart sshd
 ```
+
+### Staying with a password
+
+Perfectly workable — the machine holds one share, not the envelopes. Two things
+make it a fair trade, because an open SSH port on a public IP is scanned within
+minutes of existing:
+
+```bash
+# A long, unique password — not one used anywhere else, and not the one from
+# the provider's welcome email or support ticket
+passwd
+
+# Rate-limit the guessing
+dnf install -y fail2ban && systemctl enable --now fail2ban
+```
+
+What matters far more than which method you pick is that the password you were
+originally given — the one that travelled by e-mail or through a support
+ticket — is no longer in use.
 
 Your hosting provider always has hypervisor-level access to the disk; that is
 true of every VPS and cannot be avoided. It does not break the scheme, because
