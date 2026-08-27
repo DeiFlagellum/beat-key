@@ -65,6 +65,30 @@ most one. It does make one rule concrete, though:
 Tell BeatTime which provider and country you are on, so this can be checked
 against the other operators.
 
+### On AlmaLinux, Rocky or Fedora, two extras
+
+These ship with SELinux enforcing and firewalld enabled, which Debian and
+Ubuntu do not. Both are good defaults — they just need one command each.
+
+```bash
+# Check what you are dealing with
+getenforce                     # Enforcing / Permissive / Disabled
+systemctl is-active firewalld
+
+# Let the reverse proxy answer on 80 and 443 (step 7)
+firewall-cmd --permanent --add-service=http --add-service=https
+firewall-cmd --reload
+```
+
+For SELinux you do not need to disable anything: the `:Z` on the volume in
+step 4 tells Docker to label the directory correctly. If you ever see
+`permission denied` on a directory that already has the right owner, SELinux is
+the usual reason and `:Z` is the fix.
+
+Do **not** leave port 8080 open to the world. The container binds to
+`127.0.0.1` in step 4 for exactly this reason; only the reverse proxy needs to
+reach it.
+
 ## Step 1 — Agree your operator id
 
 Pick a short name for **your organisation** and tell BeatTime. Lowercase
@@ -113,7 +137,9 @@ services:
     environment:
       BEAT_KEY_OP: "your-org-id"        # from step 1
     volumes:
-      - /srv/beat-key:/data             # the only place the key exists
+      # `:Z` labels the directory for SELinux (AlmaLinux, Rocky, Fedora).
+      # It is ignored on systems without SELinux, so it is safe everywhere.
+      - /srv/beat-key:/data:Z           # the only place the key exists
     ports:
       - "127.0.0.1:8080:8080"           # localhost only; HTTPS comes in step 7
     read_only: true
@@ -283,7 +309,8 @@ cosign verify ghcr.io/deiflagellum/beat-key@sha256:9913de07399a36a3a007f7ac95a55
 
 | Symptom | Cause |
 |---|---|
-| `permission denied` on start | Step 3 skipped — `chown 65532:65532` on the data directory |
+| `permission denied` on start | Step 3 skipped — `chown 65532:65532` on the data directory. If the owner is already right, it is SELinux: make sure the volume line ends in `:Z` |
+| Nothing answers on 443 | firewalld — see the AlmaLinux/Rocky note above |
 | Exit code 3 | Safety catch fired: the data directory is empty or holds a different key. Do **not** delete anything; check the mount path first |
 | `404` for a past beat | The server's clock is wrong. Check NTP |
 | Refuses to start, complains about `BEAT_KEY_OP` | The id names an environment (`-prod`, `-vps`) or uses characters outside `[a-z0-9-]` |
