@@ -211,6 +211,42 @@ dnf clean all
 Adding the repository is better than the script anyway: Docker updates then
 arrive through `dnf` like everything else, including under `dnf-automatic`.
 
+**Then check that the kernel can actually do container networking:**
+
+```bash
+find /lib/modules/$(uname -r) -name 'xt_addrtype*' | grep -q .   && echo "OK"   || echo "MISSING — see below"
+```
+
+Minimal EL images install `kernel-core` and `kernel-modules-core` but often not
+`kernel-modules-extra`, which is where `xt_addrtype` lives. Docker needs it to
+set up its NAT rules, and installing Docker does not pull kernel modules as a
+dependency — so the daemon installs cleanly and then refuses to start with:
+
+```
+'iptables -t nat -A PREROUTING -m addrtype --dst-type LOCAL -j DOCKER' failed:
+Warning: Extension addrtype revision 0 not supported, missing kernel module?
+```
+
+The fix, and note the second half — a freshly reinstalled VPS is often still
+booted into an older kernel than the newest one installed, and modules only
+exist for the kernel they were built for:
+
+```bash
+dnf install -y kernel-modules-extra
+uname -r                                   # running kernel
+rpm -qa 'kernel-modules-extra*'            # which kernels have the modules
+
+# If those two do not match, reboot — you also want the newer kernel anyway
+reboot
+```
+
+After the reboot, `systemctl status docker` should be green. Confirm the whole
+path — daemon, networking, image pull — before going further:
+
+```bash
+docker run --rm hello-world
+```
+
 ## Step 3 — Create the data directory
 
 The container runs as an unprivileged user (uid 65532), so the directory has to
