@@ -276,8 +276,10 @@ services:
       # `:Z` labels the directory for SELinux (AlmaLinux, Rocky, Fedora).
       # It is ignored on systems without SELinux, so it is safe everywhere.
       - /srv/beat-key:/data:Z           # the only place the key exists
-    ports:
-      - "127.0.0.1:8080:8080"           # localhost only; HTTPS comes in step 7
+    expose:
+      - "8080"                          # internal only — the proxy in step 7
+                                        # reaches it over the compose network,
+                                        # so no host port is published at all
     read_only: true
     cap_drop: ["ALL"]
     security_opt: ["no-new-privileges:true"]
@@ -331,22 +333,53 @@ starting a new life.
 
 ## Step 7 — Put it behind HTTPS
 
-The service must be reachable from the internet over HTTPS. With Caddy this is
-three lines — it obtains and renews the certificate itself:
+The service must be reachable from the internet over HTTPS. On a clean machine
+the simplest route installs nothing: add the proxy to the same compose file.
+Docker is already there, and this way `beat-key` publishes no host port at all —
+the proxy reaches it over the internal network.
 
-`/etc/caddy/Caddyfile`
+Add to `/srv/beat-key/compose.yml`:
+
+```yaml
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: unless-stopped
+    depends_on: [beat-key]
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /srv/beat-key/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:
+```
+
+`/srv/beat-key/Caddyfile` — the whole configuration:
 
 ```
 key.your-domain.example {
-    reverse_proxy 127.0.0.1:8080
+    reverse_proxy beat-key:8080
 }
 ```
 
 ```bash
-systemctl reload caddy
+cd /srv/beat-key
+docker compose up -d
+docker logs caddy 2>&1 | tail -5     # it obtains the certificate by itself
 ```
 
-nginx or Traefik work equally well; nothing about the service is special.
+The domain's A record must already point at this server: Caddy gets the
+certificate over ACME and needs port 80 reachable. If DNS has not propagated
+yet it will keep retrying — wait, then `docker compose restart caddy`.
+
+**Already running nginx or Caddy on the host?** Then keep it there instead:
+publish `- "127.0.0.1:8080:8080"` on the `beat-key` service in step 4 and point
+your existing proxy at `127.0.0.1:8080`. Nothing about this service is special.
 
 ## Step 8 — Check it from outside
 
