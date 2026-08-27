@@ -180,9 +180,36 @@ not change who you are.
 
 Skip if you already have it.
 
+**Debian / Ubuntu:**
+
 ```bash
 curl -fsSL https://get.docker.com | sh
 ```
+
+**AlmaLinux / Rocky:** the convenience script above refuses to run — it matches
+on the `ID` in `/etc/os-release` and its list has `centos` and `rhel` but not
+`almalinux`. That is a gap in the script, not in the packages: Docker publishes
+EL builds under the `centos` path and they install unchanged here.
+
+```bash
+curl -fsSL https://download.docker.com/linux/centos/docker-ce.repo   -o /etc/yum.repos.d/docker-ce.repo
+
+dnf install -y docker-ce docker-ce-cli containerd.io   docker-buildx-plugin docker-compose-plugin
+
+systemctl enable --now docker
+docker --version && docker compose version
+```
+
+If `dnf` reports a 404 on the metadata, `$releasever` expanded to something
+other than the major version. One fix:
+
+```bash
+sed -i 's|/centos/$releasever/|/centos/10/|' /etc/yum.repos.d/docker-ce.repo
+dnf clean all
+```
+
+Adding the repository is better than the script anyway: Docker updates then
+arrive through `dnf` like everything else, including under `dnf-automatic`.
 
 ## Step 3 — Create the data directory
 
