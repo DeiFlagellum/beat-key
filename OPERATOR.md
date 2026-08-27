@@ -33,6 +33,38 @@ real request is *keep 32 bytes safe for years*, not *maintain 99.9%*.
 
 ---
 
+## Step 0 — Lock the machine down first
+
+Do this **before** anything else. The key is generated on first start of the
+container, and it should be generated on a machine that is already secure — not
+on one whose root password is still sitting in a support ticket.
+
+On a freshly provisioned VPS:
+
+```bash
+# 1. Change the root password, especially if it was ever sent to anyone
+passwd
+
+# 2. Put your SSH key on the box, then turn off password login
+ssh-copy-id root@<ip>          # from your own machine
+sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
+systemctl restart sshd         # keep your current session open until you have tested a new one
+
+# 3. Confirm the clock is right — a wrong clock releases shares at the wrong time
+timedatectl
+```
+
+Your hosting provider always has hypervisor-level access to the disk; that is
+true of every VPS and cannot be avoided. It does not break the scheme, because
+opening an envelope needs a threshold of shares and your provider would hold at
+most one. It does make one rule concrete, though:
+
+> **Never place two shares with the same hosting provider.** Two operators on
+> the same provider look independent and are not.
+
+Tell BeatTime which provider and country you are on, so this can be checked
+against the other operators.
+
 ## Step 1 — Agree your operator id
 
 Pick a short name for **your organisation** and tell BeatTime. Lowercase
