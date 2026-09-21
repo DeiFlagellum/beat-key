@@ -74,10 +74,10 @@ were something only you received, whoever built it could have put anything in
 it — and would then effectively control your key.
 
 ```bash
-# beat-key 1.0.0
-docker pull ghcr.io/deiflagellum/beat-key@sha256:512b3542aaa3d43f52d0f364d83d681c2b9b2c07d357cd3e55f954f397a30a98
+# beat-key 1.3.0
+docker pull ghcr.io/deiflagellum/beat-key@sha256:ede854869619a6d6d47118094d1f818e7a40756c11d40b2831c83d21f74a8f44
 
-cosign verify ghcr.io/deiflagellum/beat-key@sha256:512b3542aaa3d43f52d0f364d83d681c2b9b2c07d357cd3e55f954f397a30a98   --certificate-identity-regexp 'github.com/DeiFlagellum/beat-key'   --certificate-oidc-issuer https://token.actions.githubusercontent.com
+cosign verify ghcr.io/deiflagellum/beat-key@sha256:ede854869619a6d6d47118094d1f818e7a40756c11d40b2831c83d21f74a8f44   --certificate-identity-regexp 'github.com/DeiFlagellum/beat-key'   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
 
 The digest for each release is printed in that release's workflow summary.

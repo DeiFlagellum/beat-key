@@ -13,7 +13,7 @@ services:
     # obraz. Digest kazdego wydania jest w podsumowaniu przebiegu `release`.
     #
     # beat-key 1.0.0:
-    image: ghcr.io/deiflagellum/beat-key@sha256:512b3542aaa3d43f52d0f364d83d681c2b9b2c07d357cd3e55f954f397a30a98
+    image: ghcr.io/deiflagellum/beat-key@sha256:ede854869619a6d6d47118094d1f818e7a40756c11d40b2831c83d21f74a8f44
     #
     # Alternatywa dla operatora, ktory woli automatyczne poprawki zamiast
     # przypiecia: `ghcr.io/deiflagellum/beat-key:1` da nowsze wydania 1.x po
