@@ -117,18 +117,18 @@ func (s *Server) handleRoot(w http.ResponseWriter, r *http.Request) {
 	// sprawdzenia literowka w adresie udzialu dostawalaby strone powitalna
 	// zamiast 404 i wygladalaby na sukces.
 	if r.URL.Path != "/" {
-		s.fail(w, http.StatusNotFound, "nie ma takiej sciezki; zobacz / albo /info")
+		s.fail(w, http.StatusNotFound, "no such path; see / or /info")
 		return
 	}
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
-		s.fail(w, http.StatusMethodNotAllowed, "tylko GET")
+		s.fail(w, http.StatusMethodNotAllowed, "only GET is allowed")
 		return
 	}
 
 	pub, err := s.PublicKeyB64()
 	if err != nil {
 		s.log.Error("serializacja klucza publicznego", "err", err)
-		s.fail(w, http.StatusInternalServerError, "klucz publiczny niedostepny")
+		s.fail(w, http.StatusInternalServerError, "public key unavailable")
 		return
 	}
 	idx := beat.IndexAt(s.now())

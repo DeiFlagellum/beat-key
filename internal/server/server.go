@@ -83,13 +83,13 @@ type infoResponse struct {
 
 func (s *Server) handleInfo(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
-		s.fail(w, http.StatusMethodNotAllowed, "tylko GET")
+		s.fail(w, http.StatusMethodNotAllowed, "only GET is allowed")
 		return
 	}
 	pub, err := s.PublicKeyB64()
 	if err != nil {
 		s.log.Error("serializacja klucza publicznego", "err", err)
-		s.fail(w, http.StatusInternalServerError, "klucz publiczny niedostepny")
+		s.fail(w, http.StatusInternalServerError, "public key unavailable")
 		return
 	}
 	idx := beat.IndexAt(s.now())
@@ -116,21 +116,29 @@ type shareResponse struct {
 
 func (s *Server) handleShare(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
-		s.fail(w, http.StatusMethodNotAllowed, "tylko GET")
+		s.fail(w, http.StatusMethodNotAllowed, "only GET is allowed")
 		return
 	}
 	raw := strings.TrimPrefix(r.URL.Path, "/share/")
-	if raw == "" || strings.Contains(raw, "/") {
-		s.fail(w, http.StatusBadRequest, "sciezka to /share/<beat_index>")
+	if raw == "" {
+		// Goly prefiks /share/ stoi w rejestrach operatorow (`urls`) —
+		// klient dokleja do niego indeks beatu. Kto go kliknie w
+		// przegladarce, ma dostac instrukcje z dzialajacym przykladem, a nie
+		// blad, ktory wyglada jak zepsuty adres.
+		s.shareIndex(w, r)
+		return
+	}
+	if strings.Contains(raw, "/") {
+		s.fail(w, http.StatusBadRequest, "the path is /share/<beat_index>")
 		return
 	}
 	index, err := strconv.ParseInt(raw, 10, 64)
 	if err != nil {
-		s.fail(w, http.StatusBadRequest, "beat_index musi byc liczba calkowita")
+		s.fail(w, http.StatusBadRequest, "beat_index must be an integer")
 		return
 	}
 	if index < 0 {
-		s.fail(w, http.StatusBadRequest, "beat_index nie moze byc ujemny")
+		s.fail(w, http.StatusBadRequest, "beat_index must not be negative")
 		return
 	}
 
@@ -138,7 +146,7 @@ func (s *Server) handleShare(w http.ResponseWriter, r *http.Request) {
 	// czesciowa odpowiedz, nie podpowiedz ile zostalo — 404. Kazda inna
 	// odpowiedz zaczyna byc kanalem informacyjnym o kluczu.
 	if index > beat.IndexAt(s.now()) {
-		s.fail(w, http.StatusNotFound, "ten beat jeszcze nie nadszedl")
+		s.fail(w, http.StatusNotFound, "this beat has not arrived yet")
 		return
 	}
 
@@ -146,7 +154,7 @@ func (s *Server) handleShare(w http.ResponseWriter, r *http.Request) {
 	sig, err := s.store.Sign(s.scheme, identity)
 	if err != nil {
 		s.log.Error("podpisywanie tozsamosci", "beat_index", index, "err", err)
-		s.fail(w, http.StatusInternalServerError, "podpis niedostepny")
+		s.fail(w, http.StatusInternalServerError, "signature unavailable")
 		return
 	}
 
@@ -161,6 +169,48 @@ func (s *Server) handleShare(w http.ResponseWriter, r *http.Request) {
 		Identity:  hex.EncodeToString(identity),
 		Signature: base64.StdEncoding.EncodeToString(sig),
 	})
+}
+
+type shareIndexResponse struct {
+	Op               string `json:"op"`
+	Usage            string `json:"usage"`
+	ShareURLTemplate string `json:"share_url_template"`
+	ShareURLExample  string `json:"share_url_example"`
+	CurrentBeatIndex int64  `json:"current_beat_index"`
+	Info             string `json:"info"`
+}
+
+// shareIndex odpowiada na goly prefiks /share/. Przyklad wskazuje beat, ktory
+// JUZ minal — jego udzial jest publiczny, wiec to nie narusza R4 (zadnych
+// podpowiedzi o przyszlych beatach; biezacy indeks i tak podaje /info).
+func (s *Server) shareIndex(w http.ResponseWriter, r *http.Request) {
+	base := publicBase(r)
+	idx := beat.IndexAt(s.now())
+	example := idx - 1
+	if example < 0 {
+		example = 0
+	}
+	w.Header().Set("Cache-Control", "public, max-age=60")
+	s.writeJSON(w, http.StatusOK, shareIndexResponse{
+		Op: s.op,
+		Usage: "Append an absolute beat index: GET /share/<beat_index>. The share is " +
+			"released once that beat has started; before that the answer is 404.",
+		ShareURLTemplate: base + "/share/{beat_index}",
+		ShareURLExample:  base + "/share/" + strconv.FormatInt(example, 10),
+		CurrentBeatIndex: idx,
+		Info:             base + "/info",
+	})
+}
+
+// publicBase sklada adres, pod ktorym klient widzi serwer. Za reverse proxy
+// (typowa instalacja operatora) TLS konczy proxy, wiec schemat bierzemy z
+// X-Forwarded-Proto; Host przekazuje proxy bez zmian.
+func publicBase(r *http.Request) string {
+	scheme := "http"
+	if r.TLS != nil || strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https") {
+		scheme = "https"
+	}
+	return scheme + "://" + r.Host
 }
 
 // withCORS pozwala odpytac serwer z przegladarki. Wystawiamy wylacznie dane

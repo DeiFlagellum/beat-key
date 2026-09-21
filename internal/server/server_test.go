@@ -2,11 +2,12 @@ package server
 
 import (
 	"encoding/base64"
-	"html"
 	"encoding/json"
+	"html"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -130,10 +131,37 @@ func TestInfoExposesPublicKeyOnly(t *testing.T) {
 
 func TestBadInputIs400(t *testing.T) {
 	srv, _, _ := newTestServer(t)
-	for _, path := range []string{"/share/", "/share/abc", "/share/-1", "/share/1/2", "/share/1e9"} {
+	for _, path := range []string{"/share/abc", "/share/-1", "/share/1/2", "/share/1e9"} {
 		if rec := get(t, srv, path); rec.Code != http.StatusBadRequest {
 			t.Errorf("%s dalo %d, oczekiwano 400", path, rec.Code)
 		}
+	}
+}
+
+// Goly prefiks /share/ stoi w rejestrach operatorow jako `urls`. Klikniety
+// w przegladarce ma tlumaczyc, jak go uzyc, i dawac przyklad, ktory DZIALA —
+// udzial beatu, ktory juz minal (R4: nic o przyszlych beatach).
+func TestBareSharePrefixExplainsItself(t *testing.T) {
+	srv, _, _ := newTestServer(t)
+	rec := get(t, srv, "/share/")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("/share/ dalo %d, oczekiwano 200", rec.Code)
+	}
+	var body struct {
+		Template string `json:"share_url_template"`
+		Example  string `json:"share_url_example"`
+		Current  int64  `json:"current_beat_index"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasSuffix(body.Template, "/share/{beat_index}") {
+		t.Errorf("szablon %q", body.Template)
+	}
+	i := strings.LastIndex(body.Example, "/share/")
+	example := get(t, srv, body.Example[i:])
+	if example.Code != http.StatusOK {
+		t.Errorf("przyklad %s dal %d, oczekiwano 200", body.Example, example.Code)
 	}
 }
 
