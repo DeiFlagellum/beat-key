@@ -10,6 +10,15 @@ built it.
 Setting one up? [`OPERATOR.md`](OPERATOR.md) is the ten-minute, step-by-step
 version. Full protocol: [`PROTOCOL.md`](PROTOCOL.md).
 
+**Where this is used.** [BeatTime](https://beattime.live/) seals time capsules
+with it: [beattime.live/capsule/](https://beattime.live/capsule/) is the
+user-facing side, and the envelope format is specified at
+[beattime.live/seal/](https://beattime.live/seal/). Running this server makes
+you one of the independent key holders that page lists by name — an envelope
+needs your share and an independent beacon, so BeatTime alone cannot open one.
+That is the entire reason this is a separate repository under a permissive
+licence, and not a module inside somebody else's service.
+
 ---
 
 ## What you are agreeing to run
