@@ -93,7 +93,8 @@ path nor the availability path.</p>
 <a href="https://github.com/DeiFlagellum/beat-key/blob/main/PROTOCOL.md">the protocol</a>
 — it describes exactly what a share is and how to check one. The envelope format
 itself is documented at
-<a href="https://beattime.live/seal/">beattime.live/seal</a>.</p>
+<a href="https://sigelith.org/seal/">sigelith.org/seal</a> (Sigelith, formerly
+BeatTime — hence the <code>beattime-</code> prefix in the format names).</p>
 
 <footer>
 Source, reproducible builds and the operator guide:

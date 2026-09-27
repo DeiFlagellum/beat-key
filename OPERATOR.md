@@ -7,6 +7,11 @@ envelopes cannot be opened early by any single party. Your server publishes a
 signature once a moment has passed, and nothing else. It never sees anyone's
 data.
 
+The service asking you is **Sigelith** ([sigelith.org](https://sigelith.org/),
+formerly BeatTime). The software keeps its name, beat-key, and the format
+identifiers keep their `beattime-` prefix — they are part of every envelope
+already sealed.
+
 ---
 
 ## What your VPS needs
@@ -109,7 +114,7 @@ most one. It does make one rule concrete, though:
 > **Never place two shares with the same hosting provider.** Two operators on
 > the same provider look independent and are not.
 
-Tell BeatTime which provider and country you are on, so this can be checked
+Tell Sigelith which provider and country you are on, so this can be checked
 against the other operators.
 
 ### On AlmaLinux, Rocky or Fedora, two extras
@@ -164,7 +169,7 @@ reach it.
 
 ## Step 1 — Agree your operator id
 
-Pick a short name for **your organisation** and tell BeatTime. Lowercase
+Pick a short name for **your organisation** and tell Sigelith. Lowercase
 letters, digits and hyphens, up to 32 characters:
 
 ```
@@ -266,7 +271,7 @@ chown 65532:65532 /srv/beat-key
 services:
   beat-key:
     # Pinned by digest, not by tag: a tag can be repointed at a different
-    # image, a digest cannot. Ask BeatTime for the current one.
+    # image, a digest cannot. Ask Sigelith for the current one.
     image: ghcr.io/deiflagellum/beat-key@sha256:ede854869619a6d6d47118094d1f818e7a40756c11d40b2831c83d21f74a8f44
     container_name: beat-key
     restart: unless-stopped
@@ -303,9 +308,9 @@ wygenerowano NOWY klucz operatora ...
 beat-key gotowy op=your-org-id ... public_key=<long base64 string>
 ```
 
-**Copy that `public_key`.** You will need it in the next step and BeatTime
+**Copy that `public_key`.** You will need it in the next step and Sigelith
 needs it too. The private half never leaves `/srv/beat-key` — nobody, including
-BeatTime, can ask you for it, and there is no command that prints it.
+Sigelith, can ask you for it, and there is no command that prints it.
 
 ## Step 6 — Turn on the safety catch
 
@@ -399,7 +404,7 @@ curl -s -o /dev/null -w 'future: %{http_code}  (expect 404)\n' https://key.your-
 ```
 
 The second one matters most. A server that answers for a *future* beat would
-release shares early and break every envelope it takes part in. BeatTime checks
+release shares early and break every envelope it takes part in. Sigelith checks
 this before adding you to the registry.
 
 ## Step 9 — Back up the key
@@ -412,7 +417,7 @@ Move that file somewhere off this machine. **It is a copy of the key** — treat
 it like a safe, not like an application backup. On this machine alone it
 protects you against a mistake, not against losing the machine.
 
-## Step 10 — Send BeatTime three things
+## Step 10 — Send Sigelith three things
 
 ```
 op:         your-org-id
@@ -428,7 +433,7 @@ exchange.
 ## What you are and are not signing up for
 
 **You cannot open an envelope.** Your share is one of several; on its own it
-reveals nothing. Neither can BeatTime without you — that is the entire point of
+reveals nothing. Neither can Sigelith without you — that is the entire point of
 asking you.
 
 **You hold no user data.** Not one byte of anyone's content passes through the
@@ -446,7 +451,7 @@ every envelope that depends on your share loses that share.
 
 1. **Never delete or recreate the data directory** once envelopes exist against
    your key.
-2. **Never accept a key from anyone**, including BeatTime. There is deliberately
+2. **Never accept a key from anyone**, including Sigelith. There is deliberately
    no way to import one. If someone offers you a key file, something is wrong.
 3. **Never run an image someone sent you privately.** Pull it from the public
    registry by digest. The source is public at

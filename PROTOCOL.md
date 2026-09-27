@@ -3,6 +3,9 @@
 What this server implements, in enough detail to verify the code or write a
 second implementation. This is the operator-facing subset of the
 `beattime-seal-v1` envelope specification — the parts a key server touches.
+The full specification is published by Sigelith (formerly BeatTime) at
+<https://sigelith.org/seal/>. The `beattime-` prefixes stay: they are part of
+signed data and of every envelope already sealed.
 
 ---
 

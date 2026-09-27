@@ -108,7 +108,7 @@ jobs:
             type=raw,value=latest,enable=${{ steps.ver.outputs.full == 'true' }}
           labels: |
             org.opencontainers.image.title=beat-key
-            org.opencontainers.image.description=Serwer klucza dla kopert beattime-seal-v1
+            org.opencontainers.image.description=Sigelith Key — key server for beattime-seal-v1 time-sealed envelopes
 
       - id: push
         uses: docker/build-push-action@v6

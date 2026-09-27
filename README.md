@@ -10,12 +10,16 @@ built it.
 Setting one up? [`OPERATOR.md`](OPERATOR.md) is the ten-minute, step-by-step
 version. Full protocol: [`PROTOCOL.md`](PROTOCOL.md).
 
-**Where this is used.** [BeatTime](https://beattime.live/) seals time capsules
-with it: [beattime.live/capsule/](https://beattime.live/capsule/) is the
-user-facing side, and the envelope format is specified at
-[beattime.live/seal/](https://beattime.live/seal/). Running this server makes
-you one of the independent key holders that page lists by name — an envelope
-needs your share and an independent beacon, so BeatTime alone cannot open one.
+**Where this is used.** [Sigelith](https://sigelith.org/) (formerly BeatTime)
+seals time capsules with it: [sigelith.org/capsule/](https://sigelith.org/capsule/)
+is the user-facing side, and the envelope format is specified at
+[sigelith.org/seal/](https://sigelith.org/seal/). There this server is called
+**Sigelith Key**. The software, the image and the format identifiers
+(`beattime-seal-v1`, `beattime-beat-v1`) keep their names: the identifiers are
+part of every envelope already sealed, and renaming them would break those
+envelopes. Running this server makes you one of the independent key holders
+that page lists by name — an envelope needs your share and an independent
+beacon, so Sigelith alone cannot open one.
 That is the entire reason this is a separate repository under a permissive
 licence, and not a module inside somebody else's service.
 
@@ -45,7 +49,7 @@ means envelopes open later, never that data is lost. The real request is
 *"keep 32 bytes safe for years"*, not *"maintain 99.9% uptime"*.
 
 **What you cannot do.** You cannot open an envelope. Your share is one of
-several; on its own it reveals nothing. Nor can the BeatTime operator open one
+several; on its own it reveals nothing. Nor can the Sigelith operator open one
 without you.
 
 **Resource cost.** Measured, not estimated: 3.4 MB to download, 16 MB on disk, and **2-3 MB of RAM** — idle and under load alike. A few kilobytes of traffic a day. The container is not the constraint; being able to run Docker at all is.
@@ -61,7 +65,7 @@ curl localhost:8080/info
 
 That is the whole installation. On first start the container generates its own
 key and logs the public half. Send that public key (and your `op` identifier)
-to BeatTime — nothing else.
+to Sigelith — nothing else.
 
 Set exactly one thing before starting, in `compose.yml`:
 
@@ -78,7 +82,7 @@ you are. The server refuses to start if it does not match.
 ### Verify the image before running it
 
 The image must be **public and pulled by digest**, never handed to you
-privately. That is what keeps your share independent of BeatTime: if the image
+privately. That is what keeps your share independent of Sigelith: if the image
 were something only you received, whoever built it could have put anything in
 it — and would then effectively control your key.
 
