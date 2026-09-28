@@ -272,7 +272,7 @@ services:
   beat-key:
     # Pinned by digest, not by tag: a tag can be repointed at a different
     # image, a digest cannot. Ask Sigelith for the current one.
-    image: ghcr.io/deiflagellum/beat-key@sha256:ede854869619a6d6d47118094d1f818e7a40756c11d40b2831c83d21f74a8f44
+    image: ghcr.io/deiflagellum/beat-key@sha256:0e8b9237f2a0a3a1d3f5fabda47e1820d8c93d52dd5ac86b9f0751bfa16779a2
     container_name: beat-key
     restart: unless-stopped
     environment:
@@ -474,7 +474,7 @@ Builds are reproducible, and CI fails if two builds of the same commit ever
 differ. You can also check the signature on the published image:
 
 ```bash
-cosign verify ghcr.io/deiflagellum/beat-key@sha256:ede854869619a6d6d47118094d1f818e7a40756c11d40b2831c83d21f74a8f44 \
+cosign verify ghcr.io/deiflagellum/beat-key@sha256:0e8b9237f2a0a3a1d3f5fabda47e1820d8c93d52dd5ac86b9f0751bfa16779a2 \
   --certificate-identity-regexp 'github.com/DeiFlagellum/beat-key' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
