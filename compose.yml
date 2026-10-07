@@ -12,8 +12,8 @@ services:
     # digestu nie — to jedyna forma, w ktorej "ten obraz" znaczy naprawde ten
     # obraz. Digest kazdego wydania jest w podsumowaniu przebiegu `release`.
     #
-    # beat-key 1.0.0:
-    image: ghcr.io/deiflagellum/beat-key@sha256:0e8b9237f2a0a3a1d3f5fabda47e1820d8c93d52dd5ac86b9f0751bfa16779a2
+    # beat-key 1.4.0:
+    image: ghcr.io/deiflagellum/beat-key@sha256:08ca57514e3464a20de6af5d0f3e59cc32ef0ea5f946913d09be08a3e810696d
     #
     # Alternatywa dla operatora, ktory woli automatyczne poprawki zamiast
     # przypiecia: `ghcr.io/deiflagellum/beat-key:1` da nowsze wydania 1.x po
