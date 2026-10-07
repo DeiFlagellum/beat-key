@@ -38,6 +38,9 @@ type Server struct {
 	// now jest wstrzykiwalne, zeby test mogl sprawdzic granice czasu bez
 	// czekania 86 sekund.
 	now func() time.Time
+
+	// operator — dane do stopki strony (operator.go); nil = bez stopki.
+	operator *OperatorInfo
 }
 
 // New sklada serwer. `op` jest juz zwalidowany przez wywolujacego.

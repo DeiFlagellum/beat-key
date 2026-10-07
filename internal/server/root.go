@@ -47,6 +47,7 @@ code,.m{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em}
 .note{border-left:3px solid var(--acc);padding-left:.9rem;margin:1.4rem 0}
 footer{margin-top:2.5rem;padding-top:1.2rem;border-top:1px solid var(--line);
  font-size:.85rem;color:var(--dim)}
+footer .opinfo{margin:0 0 .8rem;color:var(--fg)}
 </style></head><body><main>
 
 <h1>beat-key</h1>
@@ -97,7 +98,8 @@ itself is documented at
 BeatTime — hence the <code>beattime-</code> prefix in the format names).</p>
 
 <footer>
-Source, reproducible builds and the operator guide:
+{{with .Operator}}<p class="opinfo"><strong>Operator:</strong> {{.Name}}{{if .Address}} · {{.Address}}{{end}}{{if .Registry}} · {{.Registry}}{{end}}{{if .Contact}} · {{if .ContactMail}}<a href="mailto:{{.Contact}}">{{.Contact}}</a>{{else}}{{.Contact}}{{end}}{{end}}{{if .URL}} · <a href="{{.URL}}" rel="noopener">{{.URL}}</a>{{end}}</p>
+{{end}}Source, reproducible builds and the operator guide:
 <a href="https://github.com/DeiFlagellum/beat-key">github.com/DeiFlagellum/beat-key</a>.
 The image is public so that any operator can rebuild it and compare.
 </footer>
@@ -111,6 +113,8 @@ type rootData struct {
 	PublicKey string
 	BeatIndex int64
 	BeatOfDay int64
+	// Operator — oswiadczenie operatora (nazwa, adres, kontakt); nil = bez stopki.
+	Operator *OperatorInfo
 }
 
 func (s *Server) handleRoot(w http.ResponseWriter, r *http.Request) {
@@ -142,6 +146,7 @@ func (s *Server) handleRoot(w http.ResponseWriter, r *http.Request) {
 		PublicKey: pub,
 		BeatIndex: idx,
 		BeatOfDay: beat.OfDay(idx),
+		Operator:  s.operator,
 	}); err != nil {
 		s.log.Error("render strony glownej", "err", err)
 	}

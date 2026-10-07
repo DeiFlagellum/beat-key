@@ -27,6 +27,14 @@ services:
       # i nigdy nie zmieniany. Bez nazw srodowisk (-prod, -vps2) — zmiana
       # hostingu nie zmienia operatora.
       BEAT_KEY_OP: "zmien-mnie"
+      # Opcjonalnie (1.4.0+): kim jest operator — stopka strony pod `/`.
+      # Pole bez nazwy, za dlugie albo adres strony bez https jest pomijane
+      # z ostrzezeniem w logu; nigdy nie blokuje startu. OPERATOR.md, krok 9a.
+      # BEAT_KEY_OPERATOR_NAME: "Twoja Firma"
+      # BEAT_KEY_OPERATOR_ADDRESS: "ul. Przykladowa 1, 00-000 Miasto, Kraj"
+      # BEAT_KEY_OPERATOR_REGISTRY: "NIP 0000000000"
+      # BEAT_KEY_OPERATOR_CONTACT: "kontakt@example.org"
+      # BEAT_KEY_OPERATOR_URL: "https://example.org"
 
     volumes:
       # JEDYNE miejsce, w ktorym istnieje klucz prywatny. Kopia zapasowa tego

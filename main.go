@@ -77,6 +77,18 @@ func main() {
 	}
 
 	srv := server.New(op, store, scheme, log)
+
+	// Dane operatora w stopce strony (opcjonalne, OPERATOR.md). Niepoprawne pole
+	// jest pomijane z ostrzezeniem — stopka to informacja, a nie warunek startu.
+	info, bad := server.OperatorInfoFromEnv(os.Getenv)
+	for _, key := range bad {
+		log.Warn("pomijam niepoprawne pole danych operatora (za dlugie, znaki sterujace, "+
+			"zly e-mail, adres strony bez https albo brak nazwy)", "zmienna", key)
+	}
+	if info.Name != "" {
+		srv.SetOperatorInfo(info)
+		log.Info("dane operatora w stopce strony", "nazwa", info.Name)
+	}
 	pub, err := srv.PublicKeyB64()
 	if err != nil {
 		log.Error("klucz publiczny", "err", err)

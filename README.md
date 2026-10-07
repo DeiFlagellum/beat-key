@@ -114,6 +114,14 @@ an image whose author you have to trust.
 
 ---
 
+### Operator details on the page (optional, 1.4.0+)
+
+`BEAT_KEY_OPERATOR_NAME`, `_ADDRESS`, `_REGISTRY`, `_CONTACT` (e-mail or text) and `_URL`
+(https only) put a one-line "Operator: …" footer on the page at `/`, so whoever finds
+the address in an envelope can see who holds the share. Shown as given, never checked;
+an invalid field is skipped with a warning and never stops the server. `/info` and the
+protocol are unchanged. Details: [OPERATOR.md](OPERATOR.md#step-9a--say-who-you-are-on-the-page-optional-140).
+
 ## The key
 
 It lives at `/data/key.bin` inside the container, on a named Docker volume.

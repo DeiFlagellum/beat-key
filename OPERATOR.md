@@ -417,6 +417,32 @@ Move that file somewhere off this machine. **It is a copy of the key** — treat
 it like a safe, not like an application backup. On this machine alone it
 protects you against a mistake, not against losing the machine.
 
+## Step 9a — Say who you are on the page (optional, 1.4.0+)
+
+Someone who finds your address in an envelope years from now will open it in a
+browser. Your `op` id tells them you are the operator in the registry; your
+name, address and contact tell them *who* that is. Add any of these under
+`environment:` and the page at `/` shows them in its footer:
+
+```yaml
+      BEAT_KEY_OPERATOR_NAME: "Your Company Ltd"            # required for the footer
+      BEAT_KEY_OPERATOR_ADDRESS: "1 Example Street, 00-000 City, Country"
+      BEAT_KEY_OPERATOR_REGISTRY: "VAT/company number"     # optional
+      BEAT_KEY_OPERATOR_CONTACT: "contact@example.org"     # e-mail or plain text
+      BEAT_KEY_OPERATOR_URL: "https://example.org"         # https only
+```
+
+```bash
+docker compose up -d
+docker logs beat-key | grep "dane operatora"
+```
+
+These are your statement, like an imprint: the server only shows them, it does
+not check them. Each field is one line of at most 200 characters. A field that
+breaks those rules (or a URL without `https://`, or contact details without a
+name) is skipped with a warning in the log — it never stops the key server.
+Nothing here changes `/info` or the protocol.
+
 ## Step 10 — Send Sigelith three things
 
 ```
