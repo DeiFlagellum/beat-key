@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata from this file."
+type: software
+title: "beat-key"
+abstract: >-
+  A key server for beattime-seal-v1 time-sealed envelopes. It publishes a BLS
+  signature over a beat identity only once that beat has arrived. Combined with an
+  independent beacon (drand), it makes an envelope that no single party can open
+  early, including the person who built it. Sigelith uses it, as Sigelith Key, for
+  its time capsules.
+authors:
+  - family-names: Koch
+    given-names: Adam
+    orcid: "https://orcid.org/0009-0008-7882-7426"
+repository-code: "https://github.com/DeiFlagellum/beat-key"
+url: "https://sigelith.org/seal/"
+license: Apache-2.0
+keywords:
+  - time-lock encryption
+  - threshold cryptography
+  - BLS signatures
+  - drand
+  - key server
